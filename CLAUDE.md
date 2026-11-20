@@ -16,7 +16,8 @@
   - 지금 설정: `db` (규칙: 루트 read/write = owner, 주인만 읽고 쓰기), `user`
 - 기록은 Artifact db의 `days/<YYYY-MM-DD>` 문서다 (하루는 새벽 6시에 바뀐다). 문서 하나에 그날 체크들(`checks` 배열)과 결과(`outcome`: easy / fit / pushed / crashed)가 들어 있다. Claude는 ArtifactData 도구(`list`, `get`)로 읽는다. **기록을 이 저장소에 복사하지 않는다.**
 - 점수 기준을 바꾸면 README의 "점수 계산" 표도 같은 PR에서 고친다. 저장된 체크에는 그때의 점수(`score`)와 기준 버전(`v`)이 남으니, 기준을 바꾸면 `index.html`의 `MODEL_V`를 올린다.
-- 미리보기: `node .claude/preview-server.js`를 백그라운드로 켜고 http://localhost:8123 을 연다 (db 없는 미리보기 모드). 점수 확인용 함수: `window.__energy.computeResult(...)`.
+- 저장은 저장된 문서를 새로 읽어 그 위에 고친 뒤 통째로 쓴다 (`saveDay`의 mutate). 화면의 기록으로 문서를 새로 만들어 덮어쓰지 않는다. 화면 기록이 오래됐으면 다른 체크·결과가 지워지기 때문이다 (2026-11-21 검토에서 찾음).
+- 미리보기: `node .claude/preview-server.js`를 백그라운드로 켜고 http://localhost:8123 을 연다 (db 없는 미리보기 모드). 저장까지 확인하려면 `/?mock=1` (옵션은 `.claude/mock-db.js` 맨 위). 확인용: `window.__energy` (computeResult, dayKey, state, render, askDay), 가짜 저장소는 `window.__mock`.
 
 ## 작업 방식
 
