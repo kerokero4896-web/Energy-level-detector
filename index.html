@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
 <style>
 /* 레이아웃: 휴대폰 한 손 기준의 좁은 계기판 기둥(최대 34rem).
-   위에서부터 어제 결과 한 줄 → 오늘 판정(점수·눈금·계획) → 지금 멈춤 점검 → 날마다 쌓이는 기록.
+   위에서부터 지난 결과 묻기 한 줄 → 오늘 판정(점수·눈금·계획) → 지금 멈춤 점검 → 날마다 쌓이는 기록.
    체크는 화면 전체를 덮는 4단계 시트에서 한다.
    색은 상태(충분·보통·낮음·바닥)만 말하고, 파랑 두 톤이 신호(진한 점)와 느낌(옅은 고리)을 가른다. */
 :root {
@@ -14,13 +14,15 @@
   --surface-2: #e9eeeb;
   --ink: #13201b;
   --ink-2: #48564f;
-  --muted: #6f7d76;
+  --muted: #5d6a64;
   --line: #d9e0dc;
   --line-2: #bfc9c4;
   --accent: #2a63c6;
   --accent-ink: #ffffff;
   --accent-wash: #e1eafa;
   --gut: #5d89d6;
+  --gut-on: #5d89d6;
+  --gut-on-ink: #0b1a33;
   --good: #0ca30c;
   --neutral: #8a978f;
   --warn: #fab219;
@@ -44,6 +46,8 @@
     --accent-ink: #0a1222;
     --accent-wash: #1a2741;
     --gut: #4f78c0;
+    --gut-on: #7da2e0;
+    --gut-on-ink: #0a1222;
     --neutral: #7c8a83;
     color-scheme: dark;
   }
@@ -61,11 +65,13 @@
   --accent-ink: #0a1222;
   --accent-wash: #1a2741;
   --gut: #4f78c0;
+  --gut-on: #7da2e0;
+  --gut-on-ink: #0a1222;
   --neutral: #7c8a83;
   color-scheme: dark;
 }
 
-* { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body {
   background: var(--bg);
@@ -99,9 +105,10 @@ p { margin: 0; }
 .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .top-text { min-width: 0; }
 .top h1 { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
-.top-text p { margin-top: 2px; color: var(--ink-2); font-size: 13px; }
+.top-text p { margin-top: 2px; color: var(--ink-2); font-size: 13px; text-wrap: balance; }
 .date-chip { flex: none; font-size: 12px; font-weight: 500; color: var(--ink-2); padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-variant-numeric: tabular-nums; }
 .banner { padding: 10px 14px; border-radius: 12px; background: var(--accent-wash); color: var(--ink); font-size: 13px; }
+.banner-warn { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; background: var(--surface-2); background: color-mix(in srgb, var(--warn) 22%, var(--surface)); }
 
 /* 카드 */
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 16px; }
@@ -132,11 +139,18 @@ p { margin: 0; }
 .notes li { padding-left: 14px; position: relative; }
 .notes li::before { content: ""; position: absolute; left: 2px; top: 0.62em; width: 5px; height: 5px; border-radius: 50%; background: var(--line-2); }
 
+.rhythm-line { margin-top: 8px; font-size: 14px; color: var(--ink-2); }
+.rhythm-line b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.rhythm-line.is-warn { padding: 9px 12px; border-radius: var(--r-s); color: var(--ink); background: var(--surface-2); background: color-mix(in srgb, var(--warn) 20%, var(--surface)); }
+.rhythm-count { margin-top: 12px; }
+.down { margin-left: 2px; color: var(--crit); font-weight: 700; }
 .plan { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .plan-k { font-size: 12px; color: var(--muted); }
 .plan-v { margin: 2px 0 8px; font-size: 19px; font-weight: 700; }
 .pills { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
 .pills li { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--ink); }
+.plan-note { margin: 0 0 10px; font-size: 14px; color: var(--ink); }
+.plan-note.is-over { padding: 9px 12px; border-radius: 10px; background: var(--surface-2); background: color-mix(in srgb, var(--warn) 20%, var(--surface)); }
 .plan-foot { margin-top: 8px; font-size: 12px; color: var(--muted); }
 
 .brake { margin-top: 14px; padding: 12px 14px; border-radius: var(--r-s); background: var(--surface-2); background: color-mix(in srgb, var(--crit) 9%, var(--surface)); border: 1px solid var(--line-2); border-color: color-mix(in srgb, var(--crit) 38%, var(--surface)); }
@@ -150,51 +164,51 @@ p { margin: 0; }
 .recover-k { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 
 details.more { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 4px; }
-details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding: 8px 0; }
+details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding: 10px 0; }
 .parts { margin: 2px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; }
 .parts li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--line); }
 .parts li:last-child { border-bottom: 0; }
 .parts .d { flex: none; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 
-/* 눈금: 0~10, 아래 띠는 상태 구간 */
-.scale { position: relative; height: 84px; margin: 16px 6px 0; }
-.scale-labels span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; font-size: 13px; color: var(--ink); display: inline-flex; align-items: center; gap: 5px; }
-.scale-labels span.edge-l { transform: translateX(-10px); }
-.scale-labels span.edge-r { transform: translateX(calc(-100% + 10px)); }
+/* 눈금: 0~10, 아래 띠는 상태 구간. 값은 위의 범례 줄에 적는다 */
+.scale-key { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 14px; font-size: 13px; color: var(--ink); }
+.scale-key span { display: inline-flex; align-items: center; gap: 6px; }
+.scale-key.is-ghost { color: var(--ink-2); }
 .key-gut { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--gut); flex: none; }
 .key-sig { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
-.scale-zones { position: absolute; left: 0; right: 0; top: 30px; height: 8px; }
+.scale { position: relative; height: 62px; margin: 8px 6px 0; }
+.scale-zones { position: absolute; left: 0; right: 0; top: 10px; height: 8px; }
 .scale-zones .z { position: absolute; top: 0; height: 100%; background: var(--tone); background: color-mix(in srgb, var(--tone) 72%, var(--surface)); }
 .scale-zones .z:first-child { border-radius: 4px 0 0 4px; }
 .scale-zones .z:last-child { border-radius: 0 4px 4px 0; }
-.scale-ticks { position: absolute; left: 0; right: 0; top: 44px; height: 5px; }
+.scale-ticks { position: absolute; left: 0; right: 0; top: 24px; height: 5px; }
 .scale-ticks i { position: absolute; top: 0; width: 1px; height: 5px; background: var(--line-2); }
-.scale-link { position: absolute; top: 33px; height: 2px; background: var(--gut); }
-.mk { position: absolute; top: 34px; width: 0; height: 0; }
+.scale-link { position: absolute; top: 13px; height: 2px; background: var(--gut); }
+.mk { position: absolute; top: 14px; width: 0; height: 0; }
 .mk::before { content: ""; position: absolute; border-radius: 50%; }
 .mk-gut::before { width: 24px; height: 24px; left: -12px; top: -12px; border: 3px solid var(--gut); box-shadow: 0 0 0 2px var(--surface), inset 0 0 0 2px var(--surface); }
 .mk-sig::before { width: 16px; height: 16px; left: -8px; top: -8px; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
-.scale-nums { position: absolute; left: 0; right: 0; top: 53px; font: 500 11px/1 var(--font-data); color: var(--muted); }
-.scale-names { position: absolute; left: 0; right: 0; top: 68px; font-size: 11px; line-height: 1; color: var(--muted); }
+.scale-nums { position: absolute; left: 0; right: 0; top: 32px; font: 500 11px/1 var(--font-data); color: var(--muted); }
+.scale-names { position: absolute; left: 0; right: 0; top: 47px; font-size: 11px; line-height: 1; color: var(--muted); }
 .scale-nums span, .scale-names span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .scale-nums span:first-child { transform: none; }
 .scale-nums span:last-child { transform: translateX(-100%); }
-.scale.is-ghost .mk, .scale.is-ghost .scale-link, .scale.is-ghost .scale-labels { opacity: 0.5; }
+.scale.is-ghost .mk, .scale.is-ghost .scale-link { opacity: 0.5; }
 
 .example { margin-top: 12px; padding: 12px 12px 10px; border-radius: var(--r-s); background: var(--surface-2); }
-.example .scale { margin-top: 10px; }
+.example .scale-key { margin-top: 10px; }
 .example-tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--ink-2); border: 1px solid var(--line-2); border-radius: 6px; padding: 1px 6px; }
 .example-text { margin-top: 8px; font-size: 13px; color: var(--ink-2); }
 
 /* 버튼 */
 .btn { min-height: 46px; padding: 10px 18px; border-radius: 12px; border: 1px solid transparent; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
 .btn-primary { background: var(--accent); color: var(--accent-ink); }
-.btn-primary:disabled { background: var(--line-2); color: var(--surface); cursor: not-allowed; }
+.btn-primary:disabled { background: var(--surface-2); border-color: var(--line-2); color: var(--muted); cursor: not-allowed; }
 .btn-ghost { background: var(--surface); border-color: var(--line-2); color: var(--ink); }
-.btn-small { min-height: 38px; padding: 6px 12px; font-size: 14px; flex: none; }
+.btn-small { min-height: 40px; padding: 6px 12px; font-size: 14px; flex: none; }
 .btn-block { width: 100%; margin-top: 14px; }
 .btn-sub { font-weight: 500; font-size: 13px; opacity: 0.85; }
-.link { background: none; border: 0; padding: 8px 0; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-size: 13px; }
+.link { background: none; border: 0; padding: 10px 2px; min-height: 40px; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-size: 13px; }
 .icon-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; cursor: pointer; flex: none; }
 .icon-btn svg { width: 16px; height: 16px; }
 
@@ -209,16 +223,21 @@ details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding
 .chip-tag { font-size: 11px; font-weight: 700; color: var(--ink-2); border: 1px solid var(--line-2); border-radius: 5px; padding: 0 5px; flex: none; }
 .seg { display: flex; flex-wrap: wrap; gap: 8px; }
 .seg-4 { display: grid; grid-template-columns: repeat(4, 1fr); }
+.seg-col { display: grid; }
+.seg-col .opt { text-align: left; }
 .opt { min-height: 44px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); cursor: pointer; font-size: 14px; }
 .opt.is-on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .q { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 8px; }
 .q legend { padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
 .q + .q { margin-top: 20px; }
 .hint { font-size: 12px; color: var(--muted); }
+.hint-strong { margin-bottom: 16px; padding: 9px 12px; border-radius: 10px; background: var(--accent-wash); color: var(--ink); font-size: 13px; }
 
-/* 어제 결과 */
-.ask { background: var(--surface-2); border-radius: var(--r); padding: 14px 16px 8px; }
-.ask-q { margin-bottom: 10px; font-weight: 600; }
+/* 지난 결과 묻기 */
+.ask { background: var(--surface-2); border-radius: var(--r); padding: 14px 16px 6px; }
+.ask-q { font-weight: 600; }
+.ask-sub { margin-top: 2px; font-size: 12px; color: var(--muted); }
+.ask-opts { margin-top: 10px; }
 .ask-opts, .oc-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .oc-btn { min-height: 44px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .oc-btn::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--tone); flex: none; }
@@ -246,10 +265,10 @@ details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding
 .row-vals { flex: 1; min-width: 0; font-size: 14px; }
 .row-vals b { font-weight: 600; font-variant-numeric: tabular-nums; }
 .row-more { font-size: 12px; color: var(--muted); }
-.oc { flex: none; min-height: 36px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.oc { flex: none; min-height: 40px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .oc::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--tone); flex: none; }
 .oc.oc-empty { color: var(--ink-2); }
-.oc.oc-empty::before { background: transparent; border: 1.5px solid var(--line-2); width: 7px; height: 7px; }
+.oc.oc-empty::before { background: transparent; border: 1.5px solid var(--line-2); width: 9px; height: 9px; }
 .oc-pick { margin-top: 10px; }
 .mini { position: relative; height: 18px; margin: 8px 6px 0; }
 .mini-track { position: absolute; left: 0; right: 0; top: 8px; height: 2px; border-radius: 1px; background: var(--line); }
@@ -277,7 +296,7 @@ details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding
 .sheet-head { padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); }
 .sheet-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .sheet-step { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.progress { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; }
+.progress { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 10px; }
 .progress span { height: 4px; border-radius: 2px; background: var(--line); }
 .progress span.on { background: var(--accent); }
 .sheet-body { flex: 1; overflow-y: auto; padding: 12px max(16px, env(safe-area-inset-right, 0px)) 28px max(16px, env(safe-area-inset-left, 0px)); }
@@ -289,7 +308,7 @@ details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding
 .sheet-foot .btn-ghost { flex: 0 0 auto; }
 .gut-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
 .gut-btn { aspect-ratio: 1 / 1; max-width: 100%; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); font-size: 19px; font-weight: 600; cursor: pointer; font-variant-numeric: tabular-nums; }
-.gut-btn.is-on { background: var(--gut); border-color: var(--gut); color: #fff; }
+.gut-btn.is-on { background: var(--gut-on); border-color: var(--gut-on); color: var(--gut-on-ink); }
 .gut-ends { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: var(--muted); }
 
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 12px; background: var(--ink); color: var(--surface); font-size: 14px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18); }
@@ -314,7 +333,7 @@ details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding
     <span class="date-chip" id="date-chip"></span>
   </header>
   <div id="banner" hidden></div>
-  <section id="yesterday" hidden></section>
+  <section id="ask" hidden></section>
   <section id="today" class="card" aria-labelledby="today-h">
     <h2 id="today-h" class="h2">오늘 에너지 체크</h2>
     <p class="note">불러오는 중…</p>
@@ -329,6 +348,7 @@ details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding
 </div>
 <div id="sheet" class="sheet" hidden></div>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="sr-live" class="visually-hidden" aria-live="polite"></div>
 
 <script>
 (() => {
@@ -336,7 +356,7 @@ details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding
 document.documentElement.lang = "ko";
 
 /* ── 질문과 점수. 바꾸면 README의 "점수 계산"도 같이 고친다 ── */
-const MODEL_V = 1;
+const MODEL_V = 4;
 const SLEEP_H = [
   { id: "lt5", label: "5시간 미만", d: -3 },
   { id: "5-6", label: "5~6시간", d: -2 },
@@ -357,12 +377,55 @@ const USED = [
   { id: "much", label: "꽤", d: -1 },
   { id: "lots", label: "많이", d: -2 },
 ];
-const LOAD = [
+const SLEEP_FLAGS = [
   { id: "late", label: "새벽 1시 넘어서 잤다", d: -0.5 },
+];
+const MOVE = [
+  { id: "none", label: "거의 안 움직임", d: -0.5 },
+  { id: "light", label: "가볍게·적당히 (걷기·가벼운 러닝)", d: 0.5 },
+  { id: "hard", label: "세게 (근력·주짓수·오래 달리기)", d: -0.5 },
+];
+/* 오늘 이미 잡힌 큰 일: 점수에는 안 넣고 계획 크기에서 뺀다 */
+const PLANNED = [{ n: 0, label: "0개" }, { n: 1, label: "1개" }, { n: 2, label: "2개" }, { n: 3, label: "3개 이상" }];
+const LOAD = [
   { id: "social", label: "어제 사람을 많이 만났다", d: -1 },
   { id: "travel", label: "어제 멀리 다녀왔다", d: -1 },
 ];
+/* 그날 상황이라, 같은 날 다시 체크할 때 이어받는 항목 */
+const DAY_FLAGS = ["late", "social", "travel"];
+/* 생활 리듬: 컨디션이 괜찮을 때는 하다가, 흔들리면 먼저 빠지는 행동. 하나하나보다 지킨 개수로 본다 */
+const RHYTHM = [
+  { id: "wake", label: "정한 시간에 일어났다" },
+  { id: "wash", label: "씻고 옷을 갈아입었다" },
+  { id: "meal", label: "끼니를 제때 먹었다" },
+  { id: "memo", label: "하루 메모(한 일)를 적었다" },
+  { id: "pray", label: "명상/기도를 했다" },
+  { id: "wind", label: "자기 전 하루를 정리했다 (일기 등)" },
+  { id: "phone", label: "폰을 침대 밖에 두고 잤다" },
+];
+/* 지킨 비율 80% 이상 0, 50% 이상 −0.5, 그 아래 −1 (7개면 6~7 / 4~5 / 0~3) */
+function rhythmD(kept, total) {
+  const r = total ? kept / total : 1;
+  return r >= 0.8 ? 0 : r >= 0.5 ? -0.5 : -1;
+}
+function rhythmBands() {
+  const t = RHYTHM.length;
+  const bands = [];
+  for (let k = t; k >= 0; k--) {
+    const d = rhythmD(k, t);
+    const last = bands[bands.length - 1];
+    if (last && last.d === d) last.lo = k;
+    else bands.push({ hi: k, lo: k, d });
+  }
+  return bands;
+}
+function rhythmOfCheck(c) {
+  if (!c || !Array.isArray(c.rhythm)) return null;
+  const total = Number.isInteger(c.rhythmOf) && c.rhythmOf > 0 ? c.rhythmOf : RHYTHM.length;
+  return { kept: Math.min(c.rhythm.length, total), total };
+}
 const BODY = [
+  { id: "sick", label: "감기·몸살 기운이나 아픈 데가 있다", d: -1 },
   { id: "heavy", label: "몸이 무겁게 처진다", d: -0.5 },
   { id: "tense", label: "목·어깨가 굳어 있다", d: -0.5 },
   { id: "belly", label: "속이 불편하다 (소화·입맛)", d: -0.5 },
@@ -385,13 +448,13 @@ const INFLATE = [
   { id: "grit", label: "힘든데 끈기로 밀어붙이는 중이다", d: -0.5 },
   { id: "caffeine", label: "커피로 버티는 중이다", d: -0.5 },
 ];
-const FLAG_GROUPS = [LOAD, BODY, MIND, BRAKE, INFLATE];
+const FLAG_GROUPS = [SLEEP_FLAGS, LOAD, BODY, MIND, BRAKE, INFLATE];
 const ALL_FLAGS = new Map(FLAG_GROUPS.flat().map((o) => [o.id, o]));
 const LEVELS = {
-  full: { name: "충분", plan: "큰 일 3개까지", tips: ["쉬는 시간을 먼저 정해 두기", "좋은 날일수록 80%에서 멈추기"] },
-  ok: { name: "보통", plan: "큰 일 2개까지", tips: ["90분마다 10분 쉬기", "저녁 약속은 하나만"] },
-  low: { name: "낮음", plan: "큰 일 1개 + 작은 일 조금", tips: ["새 약속 잡지 않기", "저녁은 비워 두기", "평소보다 일찍 자기"] },
-  empty: { name: "바닥", plan: "꼭 해야 할 일 1개만", tips: ["오늘의 일은 회복", "나머지는 내일로 넘기기", "가볍게 걷고 일찍 자기"] },
+  full: { name: "충분", cap: 3, plan: "큰 일 3개까지", tips: ["쉬는 시간을 먼저 정해 두기", "좋은 날일수록 80%에서 멈추기"] },
+  ok: { name: "보통", cap: 2, plan: "큰 일 2개까지", tips: ["90분마다 10분 쉬기", "저녁 약속은 하나만"] },
+  low: { name: "낮음", cap: 1, plan: "큰 일 1개 + 작은 일 조금", tips: ["새 약속 잡지 않기", "저녁은 비워 두기", "평소보다 일찍 자기"] },
+  empty: { name: "바닥", cap: 1, plan: "꼭 해야 할 일 1개만", tips: ["오늘의 일은 회복", "나머지는 내일로 넘기기", "가볍게 걷고 일찍 자기"] },
 };
 const RECOVERY = ["걷기", "힘 빼고 가볍게 뛰기", "탁 트인 곳 다녀오기", "누군가에게 전화하기", "일찍 자기"];
 const OUTCOMES = [
@@ -407,7 +470,8 @@ const QUICK = [
   { id: "qnostop", label: "멈추려 해도 잘 안 멈춰진다" },
   { id: "qedgy", label: "짜증이 올라온다" },
 ];
-const STEPS = ["느낌", "잠과 부하", "몸·마음 경고등", "브레이크 점검"];
+const STEPS = ["느낌", "잠과 몸", "생활 리듬", "부하", "몸·마음 경고등", "브레이크 점검"];
+const LAST_STEP = STEPS.length - 1;
 
 const ICON = {
   full: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7.2" fill="currentColor"/><path d="M4.9 8.3l2 2 4.2-4.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -423,10 +487,14 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const half = (x) => Math.round(x * 2) / 2;
+/* 신호 점수는 0.5 단위로 내린다. 올리면 느낌을 높게 잡는 쪽으로 기운다 */
+const floorHalf = (x) => Math.floor(x * 2 + 1e-9) / 2;
 const fmt = (x) => { const v = half(x); return Number.isInteger(v) ? String(v) : v.toFixed(1); };
-const minus = (d) => (d < 0 ? "−" : d > 0 ? "+" : "") + fmt(Math.abs(d));
+const num = (x) => String(Math.round(x * 100) / 100);
+const minus = (d) => (d < 0 ? "−" : d > 0 ? "+" : "") + num(Math.abs(d));
 const signed1 = (x) => (x > 0.05 ? "+" : x < -0.05 ? "−" : "") + Math.abs(x).toFixed(1);
 const pct = (v) => clamp(v, 0, 10) * 10;
+const clone = (v) => JSON.parse(JSON.stringify(v));
 const reduceMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ── 날짜: 하루는 새벽 6시에 바뀐다 ── */
@@ -453,13 +521,20 @@ function computeResult(c) {
   if (sh && sh.d) parts.push({ label: "잠 " + sh.label, d: sh.d });
   const wk = WAKE.find((o) => o.id === c.wake);
   if (wk && wk.d) parts.push({ label: "일어났을 때 " + wk.label, d: wk.d });
+  const mv = MOVE.find((o) => o.id === c.move);
+  if (mv && mv.d) parts.push({ label: "어제 움직임: " + mv.label, d: mv.d });
   const pu = PUSHED.find((o) => o.n === c.pushed);
   if (pu && pu.d) parts.push({ label: "지난 3일 중 무리한 날 " + pu.n + "일", d: pu.d });
   const us = USED.find((o) => o.id === c.used);
   if (us && us.d) parts.push({ label: "오늘 이미 쓴 에너지: " + us.label, d: us.d });
+  const rh = rhythmOfCheck(c);
+  if (rh) {
+    const rd = rhythmD(rh.kept, rh.total);
+    if (rd) parts.push({ label: "생활 리듬 " + rh.kept + "/" + rh.total + " 지킴", d: rd });
+  }
   const flags = Array.isArray(c.flags) ? c.flags : [];
   for (const g of FLAG_GROUPS) for (const o of g) if (o.d && flags.includes(o.id)) parts.push({ label: o.label, d: o.d });
-  const computed = half(clamp(10 + parts.reduce((s, p) => s + p.d, 0), 0, 10));
+  const computed = floorHalf(clamp(10 + parts.reduce((s, p) => s + p.d, 0), 0, 10));
   const score = Number.isFinite(c.score) ? half(clamp(c.score, 0, 10)) : computed;
   const gut = clamp(Number(c.gut) || 0, 0, 10);
   const gap = gut - score;
@@ -473,15 +548,15 @@ function computeResult(c) {
     brakeHits,
     brakeOn: brakeHits.length > 0 || score <= 3.5,
     inflateHits,
-    overRisk: gap >= 2 || (gap >= 1 && inflateHits.length >= 1) || inflateHits.length >= 2,
+    overRisk: gap >= 2 || (gap >= 1 && inflateHits.length >= 1),
     masked: flags.includes("caffeine") || flags.includes("grit"),
     elated: flags.includes("idea") || flags.includes("cando"),
   };
 }
 function gapText(r) {
   const g = r.gap;
-  if (g >= 2) return "느낌(" + fmt(r.gut) + ")이 신호(" + fmt(r.score) + ")보다 " + fmt(g) + "점 높아요. 오늘 계획은 신호 점수에 맞추세요.";
-  if (g >= 1) return "느낌(" + fmt(r.gut) + ")이 신호보다 " + fmt(g) + "점 높아요. 계획은 신호 쪽에 맞추는 게 안전해요.";
+  if (g >= 2) return "느낌(" + fmt(r.gut) + ")이 신호(" + fmt(r.score) + ")보다 " + fmt(g) + "점 높아요. 오늘 계획은 신호 점수에 맞췄어요.";
+  if (g >= 1) return "느낌(" + fmt(r.gut) + ")이 신호보다 " + fmt(g) + "점 높아요. 계획은 신호 쪽에 맞췄어요.";
   if (g > -1) return "느낌(" + fmt(r.gut) + ")과 신호가 거의 같아요.";
   return "느낌(" + fmt(r.gut) + ")이 신호보다 " + fmt(-g) + "점 낮아요. 신호에 안 잡힌 피로일 수 있어서 계획은 느낌에 맞췄어요.";
 }
@@ -498,12 +573,14 @@ const state = {
   ocEdit: null,
   quick: new Set(),
   dismissed: new Set(),
+  pending: [], // 아직 저장이 끝나지 않은 변경: {k, mutate, status: queued | inflight | failed}
 };
 const todayKey = () => dayKey(new Date());
-const canSave = () => state.mode === "db" && state.owner !== false;
+const blockedSave = () => state.mode === "local" || (state.mode === "db" && state.owner === false);
 
 function normalizeDay(v, id) {
-  const checks = Array.isArray(v.checks) ? v.checks.filter((c) => c && typeof c === "object" && Number.isFinite(Number(c.gut)) && Number.isFinite(Number(c.score))).map((c) => ({
+  const src = v && typeof v === "object" ? v : {};
+  const checks = Array.isArray(src.checks) ? src.checks.filter((c) => c && typeof c === "object" && Number.isFinite(Number(c.gut)) && Number.isFinite(Number(c.score))).map((c) => ({
     at: typeof c.at === "string" ? c.at : "",
     gut: clamp(Number(c.gut), 0, 10),
     score: half(clamp(Number(c.score), 0, 10)),
@@ -512,31 +589,53 @@ function normalizeDay(v, id) {
     wake: typeof c.wake === "string" ? c.wake : null,
     pushed: Number.isInteger(c.pushed) ? c.pushed : null,
     used: typeof c.used === "string" ? c.used : null,
+    move: typeof c.move === "string" ? c.move : null,
+    planned: Number.isInteger(c.planned) ? c.planned : null,
+    rhythm: Array.isArray(c.rhythm) ? c.rhythm.filter((x) => typeof x === "string") : null,
+    rhythmOf: Number.isInteger(c.rhythmOf) && c.rhythmOf > 0 ? c.rhythmOf : null,
     flags: Array.isArray(c.flags) ? c.flags.filter((f) => typeof f === "string" && ALL_FLAGS.has(f)) : [],
     v: Number(c.v) || 1,
   })) : [];
-  const outcome = OUTCOMES.some((o) => o.id === v.outcome) ? v.outcome : null;
-  return { date: id, checks, outcome, outcomeAt: typeof v.outcomeAt === "string" ? v.outcomeAt : null, updatedAt: typeof v.updatedAt === "string" ? v.updatedAt : null };
+  const outcome = OUTCOMES.some((o) => o.id === src.outcome) ? src.outcome : null;
+  return { date: id, checks, outcome, outcomeAt: typeof src.outcomeAt === "string" ? src.outcomeAt : null, updatedAt: typeof src.updatedAt === "string" ? src.updatedAt : null };
 }
 
 /* ── 저장소 (claude.ai 앱 안의 db) ── */
 let db = null;
 let chain = Promise.resolve();
 const enqueue = (fn) => { const p = chain.then(fn); chain = p.catch(() => {}); return p; };
+let markReady = () => {};
+const ready = new Promise((r) => { markReady = r; });
 
 async function connect() {
-  const c = window.claude;
-  if (!c || typeof c.use !== "function") { goLocal(); return; }
-  let d = null, u = null;
-  try { [d, u] = await Promise.all([c.use("db"), c.use("user")]); } catch (e) { d = null; }
-  if (!d) { goLocal(); return; }
-  db = d;
-  state.mode = "db";
-  if (u) { try { state.owner = await u.isOwner(); } catch (e) { state.owner = null; } }
-  subscribe();
-  render();
+  try {
+    const c = window.claude;
+    if (!c || typeof c.use !== "function") { goLocal(); return; }
+    let d = null, u = null;
+    try { [d, u] = await Promise.all([c.use("db"), c.use("user")]); } catch (e) { d = null; }
+    if (!d) { goLocal(); return; }
+    db = d;
+    state.mode = "db";
+    if (u) { try { state.owner = await u.isOwner(); } catch (e) { state.owner = null; } }
+    subscribe();
+    render();
+  } finally {
+    markReady();
+  }
 }
 function goLocal() { state.mode = "local"; state.loaded = true; render(); }
+
+/* 아직 저장이 끝나지 않은 변경을 화면용 기록 위에 다시 얹는다 */
+function withPending(m) {
+  const live = state.pending.filter((p) => p.status !== "inflight");
+  if (!live.length) return m;
+  const out = new Map(m);
+  for (const p of live) {
+    const cur = out.get(p.k);
+    out.set(p.k, normalizeDay(p.mutate(cur ? clone(cur) : null), p.k));
+  }
+  return out;
+}
 
 function subscribe() {
   let confirmed = false;
@@ -552,7 +651,7 @@ function subscribe() {
         if (!v || v.date !== doc.id) continue;
         m.set(doc.id, normalizeDay(v, doc.id));
       }
-      state.days = m;
+      state.days = withPending(m);
       state.loaded = true;
       if (!snap.metadata.fromCache) { confirmed = true; clearTimeout(timer); state.loadNote = ""; }
       render();
@@ -571,35 +670,69 @@ function subscribe() {
   }
 }
 
-async function writeDay(k, body) {
+async function withRetry(fn) {
   try {
-    await db.collection("days").doc(k).set(body);
+    return await fn();
   } catch (e) {
     if (e && e.code === "unavailable") {
       await new Promise((r) => setTimeout(r, 400 + Math.random() * 800));
-      await db.collection("days").doc(k).set(body);
-    } else {
-      throw e;
+      return await fn();
     }
+    throw e;
   }
 }
-async function saveDay(k, body) {
-  state.days = new Map(state.days);
-  state.days.set(k, body);
-  render();
-  if (!canSave()) {
+/* 저장: 화면에는 바로 보여 주고, 저장할 때는 저장된 문서를 새로 읽어 그 위에 고친다.
+   화면의 기록이 오래됐거나 아직 안 불러와졌어도 다른 체크·결과를 덮어쓰지 않는다. */
+function saveDay(k, mutate) {
+  const cur = state.days.get(k);
+  const next = new Map(state.days);
+  next.set(k, normalizeDay(mutate(cur ? clone(cur) : null), k));
+  state.days = next;
+  if (blockedSave()) {
+    render();
     toast(state.mode === "db" ? "앱 주인만 저장할 수 있어서 저장하지 않았어요" : "미리보기라서 저장되지 않았어요");
-    return;
+    return Promise.resolve();
   }
-  try {
-    await enqueue(() => writeDay(k, body));
-    toast("저장했어요");
-  } catch (e) {
-    const code = e && e.code;
-    toast(code === "invalid_argument" ? "이 기록은 앱 주인만 저장할 수 있어요"
-      : code === "quota_exceeded" ? "저장 공간이 꽉 찼어요. 오래된 기록을 정리해야 해요"
-      : "저장하지 못했어요. 잠시 뒤 다시 해 보세요");
-  }
+  const p = { k, mutate, status: "queued" };
+  state.pending.push(p);
+  render();
+  return runPending(p);
+}
+function runPending(p) {
+  p.status = "queued";
+  render();
+  return enqueue(async () => {
+    await ready;
+    if (blockedSave()) {
+      dropPending(p);
+      toast("미리보기라서 저장되지 않았어요");
+      return;
+    }
+    try {
+      const ref = db.collection("days").doc(p.k);
+      const snap = await withRetry(() => ref.get());
+      const raw = snap && snap.exists ? clone(snap.data()) : null;
+      const body = p.mutate(raw);
+      p.status = "inflight";
+      await withRetry(() => ref.set(body));
+      dropPending(p);
+      toast("저장했어요");
+    } catch (e) {
+      p.status = "failed";
+      const code = e && e.code;
+      render();
+      toast(code === "invalid_argument" ? "이 기록은 앱 주인만 저장할 수 있어요"
+        : code === "quota_exceeded" ? "저장 공간이 꽉 찼어요. 오래된 기록을 정리해야 해요"
+        : "저장하지 못했어요. 위의 '다시 저장'을 눌러 주세요");
+    }
+  });
+}
+function dropPending(p) {
+  state.pending = state.pending.filter((x) => x !== p);
+  render();
+}
+function retryFailed() {
+  for (const p of state.pending.filter((x) => x.status === "failed")) runPending(p);
 }
 
 /* ── 체크 흐름 ── */
@@ -611,32 +744,46 @@ function pushedFromLog(tk) {
   }
   return known ? n : null;
 }
+function needsUsedNow(k) {
+  const h = new Date().getHours();
+  const day = state.days.get(k);
+  return h >= 12 || h < 6 || !!(day && day.checks.length);
+}
 function newDraft(k) {
   const today = state.days.get(k);
   const prev = today && today.checks.length ? today.checks[today.checks.length - 1] : null;
   const fromLog = pushedFromLog(k);
-  const now = new Date();
   return {
     k,
     step: 0,
     gut: null,
     sleepH: prev ? prev.sleepH : null,
     wake: prev ? prev.wake : null,
+    move: prev ? prev.move : null,
     pushed: prev && prev.pushed !== null ? prev.pushed : fromLog,
     pushedFromLog: !prev && fromLog !== null,
+    planned: prev ? prev.planned : null,
+    rhythm: prev && Array.isArray(prev.rhythm) ? prev.rhythm.filter((id) => RHYTHM.some((o) => o.id === id)) : [],
     used: null,
-    showUsed: now.getHours() >= 12 || now.getHours() < 6 || !!prev,
-    flags: prev ? prev.flags.filter((f) => f === "late" || f === "social" || f === "travel") : [],
+    showUsed: needsUsedNow(k),
+    dayChanged: false,
+    flags: prev ? prev.flags.filter((f) => DAY_FLAGS.includes(f)) : [],
   };
 }
 function canNext(d) {
   if (d.step === 0) return d.gut !== null;
-  if (d.step === 1) return !!d.sleepH && !!d.wake && d.pushed !== null && (!d.showUsed || !!d.used);
+  if (d.step === 1) return !!d.sleepH && !!d.wake && !!d.move;
+  if (d.step === 3) return d.pushed !== null && d.planned !== null && d.planned !== undefined && (!d.showUsed || !!d.used);
   return true;
 }
 function openCheck() {
   const k = todayKey();
   if (!state.draft || state.draft.k !== k) state.draft = newDraft(k);
+  const d = state.draft;
+  if (!d.showUsed && needsUsedNow(k)) {
+    d.showUsed = true;
+    if (d.step > 3 && !d.used) d.step = 3;
+  }
   state.sheetOpen = true;
   renderSheet({ opening: true });
 }
@@ -644,20 +791,34 @@ function closeSheet() {
   state.sheetOpen = false;
   renderSheet();
   render();
-  const b = $("#btn-start") || $("#btn-recheck");
-  if (b) b.focus({ preventScroll: true });
+  focusFirst(["btn-start", "btn-recheck"]);
 }
-async function finishCheck() {
+function finishCheck() {
   const d = state.draft;
   if (!d || d.gut === null) return;
   const now = new Date();
   const k = dayKey(now);
+  if (d.k !== k) {
+    /* 체크하는 사이 새벽 6시가 지나 날짜가 바뀜: 오늘 기준으로 잠과 부하를 다시 확인받는다 */
+    const fresh = newDraft(k);
+    fresh.gut = d.gut;
+    for (const f of d.flags) if (!DAY_FLAGS.includes(f) && !fresh.flags.includes(f)) fresh.flags.push(f);
+    fresh.step = 1;
+    fresh.dayChanged = true;
+    state.draft = fresh;
+    renderSheet({ stepChanged: true });
+    return;
+  }
   const c = {
     at: now.toISOString(),
     gut: d.gut,
     sleepH: d.sleepH,
     wake: d.wake,
+    move: d.move,
     pushed: d.pushed,
+    planned: d.planned,
+    rhythm: d.rhythm.slice(),
+    rhythmOf: RHYTHM.length,
     used: d.showUsed ? d.used : null,
     flags: d.flags.slice(),
     v: MODEL_V,
@@ -665,28 +826,32 @@ async function finishCheck() {
   const r = computeResult(c);
   c.score = r.score;
   c.level = r.level;
-  const cur = state.days.get(k);
-  const body = {
-    date: k,
-    checks: (cur ? cur.checks : []).concat([c]),
-    outcome: cur ? cur.outcome : null,
-    outcomeAt: cur ? cur.outcomeAt : null,
-    updatedAt: c.at,
-  };
   state.draft = null;
   state.sheetOpen = false;
   renderSheet();
+  saveDay(k, (raw) => {
+    const base = raw || {};
+    const checks = Array.isArray(base.checks) ? base.checks.slice() : [];
+    checks.push(c);
+    return Object.assign({}, base, {
+      date: k,
+      checks,
+      outcome: base.outcome !== undefined ? base.outcome : null,
+      outcomeAt: base.outcomeAt !== undefined ? base.outcomeAt : null,
+      updatedAt: c.at,
+    });
+  });
   window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
-  await saveDay(k, body);
-  const h = $("#btn-recheck");
-  if (h) h.focus({ preventScroll: true });
+  focusFirst(["btn-recheck"]);
 }
-async function setOutcome(k, id) {
+function setOutcome(k, id) {
   if (!isDayKey(k) || !OUTCOMES.some((o) => o.id === id)) return;
-  const cur = state.days.get(k);
   const at = new Date().toISOString();
   state.ocEdit = null;
-  await saveDay(k, { date: k, checks: cur ? cur.checks : [], outcome: id, outcomeAt: at, updatedAt: at });
+  saveDay(k, (raw) => {
+    const base = raw || {};
+    return Object.assign({}, base, { date: k, checks: Array.isArray(base.checks) ? base.checks : [], outcome: id, outcomeAt: at, updatedAt: at });
+  });
 }
 
 /* ── 그리기 ── */
@@ -696,15 +861,6 @@ function levelChip(lv) {
 function scaleHTML(gut, score, ghost) {
   const g = pct(gut), s = pct(score);
   const lo = Math.min(g, s), hi = Math.max(g, s);
-  const edge = (x) => (x < 9 ? " edge-l" : x > 91 ? " edge-r" : "");
-  let labels;
-  if (Math.abs(g - s) < 22) {
-    const x = (g + s) / 2;
-    labels = '<span class="' + edge(x).trim() + '" style="left:' + x + '%"><i class="key-gut"></i>느낌 ' + fmt(gut) + ' · <i class="key-sig"></i>신호 ' + fmt(score) + "</span>";
-  } else {
-    labels = '<span class="' + edge(g).trim() + '" style="left:' + g + '%"><i class="key-gut"></i>느낌 ' + fmt(gut) + "</span>" +
-      '<span class="' + edge(s).trim() + '" style="left:' + s + '%"><i class="key-sig"></i>신호 ' + fmt(score) + "</span>";
-  }
   const zones = [["empty", 0, 40], ["low", 40, 60], ["ok", 60, 80], ["full", 80, 100]].map(([t, a, b]) =>
     '<span class="z tone-' + t + '" style="left:calc(' + a + "% + " + (a ? 1 : 0) + "px);width:calc(" + (b - a) + "% - " + ((a ? 1 : 0) + (b < 100 ? 1 : 0)) + 'px)"></span>').join("");
   let ticks = "";
@@ -712,8 +868,10 @@ function scaleHTML(gut, score, ghost) {
   const nums = [0, 2, 4, 6, 8, 10].map((n) => '<span style="left:' + n * 10 + '%">' + n + "</span>").join("");
   const names = [["바닥", 20], ["낮음", 50], ["보통", 70], ["충분", 90]].map(([n, x]) => '<span style="left:' + x + '%">' + n + "</span>").join("");
   const aria = ghost ? "예시 눈금: 느낌 8, 신호 5" : "0부터 10까지 눈금에서 느낌 " + fmt(gut) + ", 신호 " + fmt(score);
-  return '<div class="scale' + (ghost ? " is-ghost" : "") + '" role="img" aria-label="' + aria + '">' +
-    '<div class="scale-labels" aria-hidden="true">' + labels + "</div>" +
+  return '<div class="scale-key' + (ghost ? " is-ghost" : "") + '" aria-hidden="true">' +
+      '<span><i class="key-gut"></i>느낌 ' + fmt(gut) + "</span>" +
+      '<span><i class="key-sig"></i>신호 ' + fmt(score) + "</span></div>" +
+    '<div class="scale' + (ghost ? " is-ghost" : "") + '" role="img" aria-label="' + aria + '">' +
     '<div class="scale-zones">' + zones + "</div>" +
     '<div class="scale-ticks">' + ticks + "</div>" +
     '<div class="scale-link" style="left:' + lo + "%;width:" + (hi - lo) + '%"></div>' +
@@ -733,23 +891,42 @@ function optHTML(act, v, label, on, id) {
 
 function renderBanner() {
   const el = $("#banner");
-  let msg = "";
-  if (state.mode === "local") msg = "미리보기 모드예요. 여기서 한 체크는 저장되지 않아요. claude.ai에서 열면 기록이 저장돼요.";
-  else if (state.mode === "db" && state.owner === false) msg = "이 기록은 앱 주인만 볼 수 있어요. 여기서 한 체크는 저장되지 않아요.";
-  el.hidden = !msg;
-  el.innerHTML = msg ? '<p class="banner">' + esc(msg) + "</p>" : "";
+  let html = "";
+  const failed = state.pending.filter((p) => p.status === "failed").length;
+  if (failed) html += '<div class="banner banner-warn"><span>저장하지 못한 기록이 ' + failed + '개 있어요.</span><button type="button" class="btn btn-ghost btn-small" data-act="retry-save" id="btn-retry">다시 저장</button></div>';
+  if (state.mode === "local") html += '<p class="banner">미리보기 모드예요. 여기서 한 체크는 저장되지 않아요. claude.ai에서 열면 기록이 저장돼요.</p>';
+  else if (state.mode === "db" && state.owner === false) html += '<p class="banner">이 기록은 앱 주인만 볼 수 있어요. 여기서 한 체크는 저장되지 않아요.</p>';
+  el.hidden = !html;
+  el.innerHTML = html;
 }
 
-function renderYesterday() {
-  const el = $("#yesterday");
-  const k = addDays(todayKey(), -1);
-  const d = state.days.get(k);
-  if (!state.loaded || (d && d.outcome) || state.dismissed.has(k)) { el.hidden = true; el.innerHTML = ""; return; }
+/* 결과를 안 남긴 날 묻기: 최근 2~3일 중 체크는 했는데 결과가 빈 날(오래된 날부터), 그다음 어제 */
+function askDay() {
+  if (!state.loaded || !state.days.size) return null;
+  const tk = todayKey();
+  for (let i = 3; i >= 2; i--) {
+    const k = addDays(tk, -i);
+    const d = state.days.get(k);
+    if (d && d.checks.length && !d.outcome && !state.dismissed.has(k)) return k;
+  }
+  const y = addDays(tk, -1);
+  const d = state.days.get(y);
+  if (!(d && d.outcome) && !state.dismissed.has(y)) return y;
+  return null;
+}
+function renderAsk() {
+  const el = $("#ask");
+  const k = askDay();
+  if (!k) { el.hidden = true; el.innerHTML = ""; return; }
+  const isY = k === addDays(todayKey(), -1);
+  const dt = keyToDate(k);
+  const q = isY ? "어제(" + (dt.getMonth() + 1) + "." + dt.getDate() + " " + WD[dt.getDay()] + ")는 어땠어요?" : dayLabel(k) + "은 어땠어요?";
   el.hidden = false;
-  el.innerHTML = '<div class="ask"><p class="ask-q" id="ask-h">어제 ' + dayLabel(k) + "는 어땠어요?</p>" +
+  el.innerHTML = '<div class="ask"><p class="ask-q" id="ask-h">' + q + "</p>" +
+    (isY ? "" : '<p class="ask-sub">체크한 날인데 결과가 비어 있어요.</p>') +
     '<div class="ask-opts" role="group" aria-labelledby="ask-h">' +
-    OUTCOMES.map((o) => '<button type="button" class="oc-btn tone-' + o.tone + '" data-act="set-oc" data-k="' + k + '" data-oc="' + o.id + '" id="y-' + o.id + '">' + o.label + "</button>").join("") +
-    '</div><button type="button" class="link" data-act="dismiss-y" data-k="' + k + '" id="y-skip">나중에</button></div>';
+    OUTCOMES.map((o) => '<button type="button" class="oc-btn tone-' + o.tone + '" data-act="set-oc" data-k="' + k + '" data-oc="' + o.id + '" id="ask-' + o.id + '">' + o.label + "</button>").join("") +
+    '</div><button type="button" class="link" data-act="dismiss-ask" data-k="' + k + '" id="ask-skip">나중에</button></div>';
 }
 
 function renderToday() {
@@ -761,7 +938,7 @@ function renderToday() {
     const resume = state.draft && state.draft.k === k;
     el.innerHTML =
       '<p class="eyebrow">오늘 ' + dayLabel(k) + "</p>" +
-      '<h2 id="today-h" class="h2">' + (state.loaded ? "아직 체크 전이에요" : "기록을 불러오는 중…") + "</h2>" +
+      '<h2 id="today-h" class="h2" tabindex="-1">' + (state.loaded ? "아직 체크 전이에요" : "기록을 불러오는 중…") + "</h2>" +
       '<div class="example"><span class="example-tag">예시</span>' + scaleHTML(8, 5, true) +
       '<p class="example-text">느낌은 8인데 몸과 마음의 신호로 재면 5. 이 3점 차이가 무리하게 만드는 틈이에요.</p></div>' +
       '<button type="button" class="btn btn-primary btn-block" data-act="open-check" id="btn-start">' +
@@ -778,7 +955,7 @@ function renderToday() {
   el.innerHTML =
     '<div class="today-head"><div>' +
       '<p class="eyebrow">오늘 ' + dayLabel(k) + " · " + timeLabel(last.at) + " 체크" + (n > 1 ? " · " + n + "번째" : "") + "</p>" +
-      '<h2 id="today-h" class="visually-hidden">오늘 판정</h2>' +
+      '<h2 id="today-h" class="visually-hidden" tabindex="-1">오늘 판정</h2>' +
       '<div class="reading"><span class="reading-num">' + fmt(r.score) + '</span><span class="reading-of">/10</span>' + levelChip(r.level) + "</div>" +
       '<p class="reading-cap">몸과 마음의 신호로 잰 에너지</p>' +
     "</div>" +
@@ -786,8 +963,10 @@ function renderToday() {
     scaleHTML(r.gut, r.score, false) +
     '<p class="gap' + (r.overRisk ? " is-over" : "") + '">' + esc(gapText(r)) + "</p>" +
     (notes.length ? '<ul class="notes">' + notes.map((t) => "<li>" + esc(t) + "</li>").join("") + "</ul>" : "") +
+    rhythmLineHTML(k, last) +
     '<div class="plan"><p class="plan-k">오늘 계획 크기' + (r.planByGut ? " (느낌 기준)" : "") + "</p>" +
       '<p class="plan-v">' + esc(plan.plan) + "</p>" +
+      plannedHTML(r.planLevel, last.planned) +
       '<ul class="pills">' + plan.tips.map((t) => "<li>" + esc(t) + "</li>").join("") + "</ul>" +
       '<p class="plan-foot">큰 일: 집중이 필요한 일, 외출, 사람 만나기</p></div>' +
     (r.brakeOn ? '<div class="brake" role="note"><p class="brake-h">' + ICON.empty + "브레이크 밟을 때예요</p>" +
@@ -796,10 +975,56 @@ function renderToday() {
       "<li><b>회복</b><span>원인 분석은 미루고 쉬기</span></li>" +
       "<li><b>복귀</b><span>흥미가 다시 생기면 하나씩 돌아오기</span></li></ol></div>" : "") +
     (showRecovery ? '<div class="recover"><p class="recover-k">회복 메뉴</p><ul class="pills">' + RECOVERY.map((t) => "<li>" + esc(t) + "</li>").join("") + "</ul></div>" : "") +
-    '<details class="more" id="today-details"><summary>점수가 깎인 이유</summary>' +
+    '<details class="more" id="today-details"><summary>점수 계산 내역</summary>' +
       (r.parts.length ? '<ul class="parts">' + r.parts.map((p) => "<li><span>" + esc(p.label) + '</span><span class="d">' + minus(p.d) + "</span></li>").join("") + "</ul>"
-        : '<p class="note">깎인 곳 없이 10점이에요.</p>') +
+        : '<p class="note">더하거나 깎인 곳 없이 10점이에요.</p>') +
     "</details>";
+}
+/* 생활 리듬: 그날 마지막 체크 기준. 흐름은 최근 5일 안의 기록 3개가 이틀 연속 줄었는지 (pts[0]이 가장 최근) */
+function dayRhythm(k) {
+  const day = state.days.get(k);
+  return day ? rhythmOfCheck([...day.checks].reverse().find((x) => Array.isArray(x.rhythm))) : null;
+}
+function rhythmTrend(k) {
+  const pts = [];
+  for (let i = 0; i < 5 && pts.length < 3; i++) {
+    const rh = dayRhythm(addDays(k, -i));
+    if (rh) pts.push(rh);
+  }
+  const r = pts.map((p) => p.kept / p.total);
+  return { pts, falling: pts.length === 3 && r[0] < r[1] && r[1] < r[2] };
+}
+function rhythmLineHTML(k, last) {
+  const rh = rhythmOfCheck(last);
+  if (!rh) return "";
+  const tr = rhythmTrend(k);
+  if (tr.falling) {
+    return '<p class="rhythm-line is-warn">생활 리듬 <b>' + rh.kept + "/" + rh.total + "</b> · 이틀째 줄고 있어요 (" +
+      tr.pts.slice().reverse().map((p) => p.kept).join(" → ") + "). 흔들리기 시작한 신호예요. 오늘은 큰 일보다 기상·끼니·잠부터 지키기</p>";
+  }
+  return '<p class="rhythm-line">생활 리듬 <b>' + rh.kept + "/" + rh.total + "</b></p>";
+}
+function rhythmText(rh, older) {
+  if (!rh) return "";
+  const down = older && rh.kept / rh.total < older.kept / older.total;
+  return " · 리듬 <b>" + rh.kept + "/" + rh.total + "</b>" +
+    (down ? '<span class="down" aria-hidden="true">↓</span><span class="visually-hidden">(전보다 줄어듦)</span>' : "");
+}
+/* 오늘 이미 잡힌 큰 일을 계획 크기와 견준다 */
+function plannedHTML(level, planned) {
+  if (!Number.isInteger(planned) || planned <= 0) return "";
+  const cap = LEVELS[level].cap;
+  const p = planned >= 3 ? "3개 이상" : planned + "개";
+  const ro = planned >= 3 ? "으로" : "로";
+  let text;
+  let over = false;
+  if (planned < cap) text = "이미 잡힌 큰 일 " + p + " · 더 넣는다면 " + (cap - planned) + "개까지";
+  else if (planned === cap) text = "이미 잡힌 큰 일 " + p + ro + " 꽉 찼어요. 새로 넣지 않기";
+  else {
+    over = true;
+    text = "이미 잡힌 큰 일이 " + p + ro + " 오늘 할 만한 양(" + cap + "개)보다 많아요. 미룰 수 있는 건 미루고, 못 미루면 그 밖의 일은 모두 비우기";
+  }
+  return '<p class="plan-note' + (over ? " is-over" : "") + '">' + esc(text) + "</p>";
 }
 
 function quickVerdict() {
@@ -813,7 +1038,7 @@ function renderQuick() {
   $("#quick").innerHTML =
     '<div class="sec-head"><h2 class="h3" id="quick-h">지금 멈춰야 할까?</h2><span class="sec-sub">10초 점검 · 저장 안 함</span></div>' +
     '<div class="chips" role="group" aria-labelledby="quick-h">' + QUICK.map((q) => chipHTML(q, state.quick.has(q.id), "q-toggle", "q-" + q.id)).join("") + "</div>" +
-    '<p class="verdict tone-' + v.tone + '" aria-live="polite">' + ICON[v.tone] + "<span><b>" + v.title + "</b> " + v.text + "</span></p>" +
+    '<p class="verdict tone-' + v.tone + '">' + ICON[v.tone] + "<span><b>" + v.title + "</b> " + v.text + "</span></p>" +
     (state.quick.size ? '<button type="button" class="link" data-act="q-clear" id="q-clear">다 지우기</button>' : "");
 }
 
@@ -832,7 +1057,6 @@ function insights() {
   const recent = all.filter((d) => d.date >= from && d.date <= tk);
   res.crashed30 = recent.filter((d) => d.outcome === "crashed").length;
   res.pushed30 = recent.filter((d) => d.outcome === "pushed").length;
-  res.outcomes = all.filter((d) => d.outcome).length;
   return res;
 }
 function statHTML(label, value, sub) {
@@ -846,19 +1070,28 @@ function miniHTML(c) {
     '<span class="mini-link" style="left:' + lo + "%;width:" + (hi - lo) + '%"></span>' +
     '<span class="mini-gut" style="left:' + g + '%"></span><span class="mini-sig" style="left:' + s + '%"></span></div>';
 }
-function rowHTML(k) {
+function rowHTML(k, rh, older) {
   const d = state.days.get(k);
   const c = d.checks[0];
   const oc = OUTCOMES.find((o) => o.id === d.outcome);
   const editing = state.ocEdit === k;
+  const visible = oc ? oc.short : "결과 기록";
   return '<li class="row"><div class="row-top">' +
     '<span class="row-date">' + dayLabel(k) + "</span>" +
-    '<span class="row-vals">' + (c ? "느낌 <b>" + fmt(c.gut) + "</b> · 신호 <b>" + fmt(c.score) + "</b>" + (d.checks.length > 1 ? ' <span class="row-more">+' + (d.checks.length - 1) + "회</span>" : "") : '<span class="muted">체크 없음</span>') + "</span>" +
-    '<button type="button" class="oc ' + (oc ? "tone-" + oc.tone : "oc-empty") + '" data-act="oc-edit" data-k="' + k + '" id="oc-' + k + '" aria-expanded="' + editing + '" aria-label="' + dayLabel(k) + " 결과: " + (oc ? oc.label : "기록 안 함") + '. 바꾸기">' + (oc ? oc.short : "결과 기록") + "</button></div>" +
+    '<span class="row-vals">' + (c ? "느낌 <b>" + fmt(c.gut) + "</b> · 신호 <b>" + fmt(c.score) + "</b>" + rhythmText(rh, older) + (d.checks.length > 1 ? ' <span class="row-more">+' + (d.checks.length - 1) + "회</span>" : "") : '<span class="muted">체크 없음</span>') + "</span>" +
+    '<button type="button" class="oc ' + (oc ? "tone-" + oc.tone : "oc-empty") + '" data-act="oc-edit" data-k="' + k + '" id="oc-' + k + '" aria-expanded="' + editing + '" aria-label="' + visible + " · " + dayLabel(k) + ' 결과 바꾸기">' + visible + "</button></div>" +
     (c ? miniHTML(c) : "") +
     (editing ? '<div class="oc-pick" role="group" aria-label="' + dayLabel(k) + ' 결과 고르기">' + OUTCOMES.map((o) =>
       '<button type="button" class="oc-btn tone-' + o.tone + (d.outcome === o.id ? " is-on" : "") + '" data-act="set-oc" data-k="' + k + '" data-oc="' + o.id + '" id="ocp-' + k + "-" + o.id + '" aria-pressed="' + (d.outcome === o.id) + '">' + o.label + "</button>").join("") + "</div>" : "") +
     "</li>";
+}
+function rowsHTML(keys) {
+  const rhs = keys.map(dayRhythm);
+  return keys.map((k, i) => {
+    let older = null;
+    for (let j = i + 1; j < keys.length; j++) if (rhs[j]) { older = rhs[j]; break; }
+    return rowHTML(k, rhs[i], older);
+  }).join("");
 }
 function renderLog() {
   const keys = [...state.days.keys()].sort().reverse().slice(0, 21);
@@ -871,7 +1104,7 @@ function renderLog() {
         : statHTML("느낌 − 신호, 평균", "–", (3 - ins.n) + "일 더 체크하면 보여요")) +
       (ins.bad
         ? statHTML("무리하거나 뻗은 날 아침", "느낌 " + ins.bad.gut.toFixed(1) + " · 신호 " + ins.bad.score.toFixed(1), ins.good ? "괜찮았던 날은 느낌 " + ins.good.gut.toFixed(1) + " · 신호 " + ins.good.score.toFixed(1) : ins.bad.n + "일 기준")
-        : statHTML("무리하거나 뻗은 날 아침", "–", "체크한 날의 결과가 2번 쌓이면 보여요")) +
+        : statHTML("무리하거나 뻗은 날 아침", "–", "체크한 날 중 무리하거나 뻗은 날이 2번 쌓이면 보여요")) +
       statHTML("최근 30일", "뻗은 날 " + ins.crashed30 + "일", "무리한 날 " + ins.pushed30 + "일") +
       "</dl>";
   }
@@ -879,7 +1112,7 @@ function renderLog() {
     '<div class="sec-head"><h2 class="h3" id="log-h">기록</h2>' +
     (keys.length ? '<div class="legend"><span><i class="key-gut"></i>느낌</span><span><i class="key-sig"></i>신호</span><span class="muted">그날 첫 체크</span></div>' : "") + "</div>" +
     stats +
-    (keys.length ? '<ol class="rows">' + keys.map(rowHTML).join("") + "</ol>"
+    (keys.length ? '<ol class="rows">' + rowsHTML(keys) + "</ol>"
       : '<p class="empty-log">' + (state.loaded ? "아직 기록이 없어요. 체크하면 여기에 날마다 느낌과 신호가 나란히 쌓여요. 다음 날 결과(여유·딱 맞음·무리·뻗음)까지 남기면 내 느낌이 얼마나 높게 나오는지 보여 드려요." : "기록을 불러오는 중…") + "</p>") +
     (state.loadNote ? '<p class="note">' + state.loadNote + "</p>" : "");
 }
@@ -892,19 +1125,24 @@ function renderHow() {
   };
   grp("어젯밤 잔 시간", SLEEP_H.map((o) => [o.label, o.d]));
   grp("일어났을 때", WAKE.map((o) => [o.label, o.d]));
+  grp("잠 (해당하면)", SLEEP_FLAGS.map((o) => [o.label, o.d]));
+  grp("어제 몸을 얼마나 움직였나", MOVE.map((o) => [o.label, o.d]));
+  grp("생활 리듬 (" + RHYTHM.length + "개 중 지킨 개수)", rhythmBands().map((b) => [(b.lo === b.hi ? String(b.hi) : b.lo + "~" + b.hi) + "개", b.d]));
   grp("지난 3일 중 무리한 날", PUSHED.map((o) => [o.n + "일", o.d]));
   grp("오늘 지금까지 쓴 에너지 (낮 12시 이후나 그날 두 번째 체크부터)", USED.map((o) => [o.label, o.d]));
-  grp("부하", LOAD.map((o) => [o.label, o.d]));
-  grp("몸 경고등 (하나마다)", BODY.map((o) => [o.label, o.d]));
+  grp("부하 (해당하면)", LOAD.map((o) => [o.label, o.d]));
+  grp("몸 경고등", BODY.map((o) => [o.label, o.d]));
   grp("마음 경고등 (하나마다)", MIND.map((o) => [o.label, o.d]));
   grp("브레이크 세 기준 (하나마다)", BRAKE.map((o) => [o.short + ": " + o.label, o.d]));
   grp("느낌을 부풀리는 것", INFLATE.map((o) => [o.label, o.d]));
   $("#how").innerHTML = '<details class="how" id="how-details"><summary>점수는 이렇게 계산해요</summary><div class="how-body">' +
-    "<p>10점에서 시작해서 고른 항목마다 깎아요. 0~10점, 0.5점 단위예요.</p>" +
+    "<p>10점에서 시작해서 고른 항목마다 더하거나 깎아요. 0~10점이고 10점을 넘지 않아요. 느낌을 높게 잡지 않도록 0.5점 단위로 내려서 계산해요.</p>" +
     '<div class="table-wrap"><table><thead><tr><th scope="col">항목</th><th scope="col" class="d">점수</th></tr></thead><tbody>' + rows.join("") + "</tbody></table></div>" +
     '<ul class="how-rules">' +
     "<li>8~10 충분 · 6~7.5 보통 · 4~5.5 낮음 · 0~3.5 바닥</li>" +
     "<li>오늘 계획 크기는 느낌과 신호 중 낮은 쪽에 맞춰요.</li>" +
+    "<li>오늘 이미 잡힌 큰 일(약속·외출·면접 등)은 점수에 넣지 않고, 오늘 계획 크기에서 빼요.</li>" +
+    "<li>생활 리듬은 하나하나보다 지킨 개수로 봐요. 기록에 날마다 리듬을 보여 주고, 이틀 연속 줄면 오늘 판정에서 알려 줘요.</li>" +
     "<li>브레이크 세 기준 중 하나라도 켜지거나 신호가 3.5 이하면 브레이크를 안내해요.</li>" +
     "<li>느낌을 부풀리는 것은 점수를 거의 안 깎는 대신, 느낌이 높게 나올 수 있다고 알려 줘요.</li>" +
     "<li>하루는 새벽 6시에 바뀌어요. 새벽 2시에 한 체크는 전날 기록이 돼요.</li>" +
@@ -917,7 +1155,7 @@ function render() {
   const open = [...document.querySelectorAll("details[open][id]")].map((d) => d.id);
   $("#date-chip").textContent = dayLabel(todayKey());
   renderBanner();
-  renderYesterday();
+  renderAsk();
   renderToday();
   renderQuick();
   renderLog();
@@ -925,6 +1163,12 @@ function render() {
   if (fid && !state.sheetOpen) {
     const el = document.getElementById(fid);
     if (el && el !== document.activeElement) el.focus({ preventScroll: true });
+  }
+}
+function focusFirst(ids) {
+  for (const id of ids) {
+    const el = id.charAt(0) === "." || id.indexOf(" ") >= 0 ? document.querySelector(id) : document.getElementById(id);
+    if (el) { el.focus({ preventScroll: true }); return; }
   }
 }
 
@@ -936,19 +1180,34 @@ function stepHTML(d) {
     return '<h2 id="sheet-h" class="sheet-title" tabindex="-1">지금 내 에너지, 느낌으로는 몇 점?</h2>' +
       '<p class="sheet-sub">깊게 생각하지 말고 바로 고르세요. 이 점수를 신호로 잰 점수와 나란히 보여 드려요.</p>' +
       '<div class="gut-grid" role="group" aria-label="느낌 점수, 0부터 10">' + btns + "</div>" +
-      '<div class="gut-ends"><span>0 바닥</span><span>5 보통</span><span>10 가득</span></div>';
+      '<div class="gut-ends"><span>0 바닥</span><span>6~7 보통</span><span>10 충분</span></div>';
   }
   if (d.step === 1) {
-    return '<h2 id="sheet-h" class="sheet-title" tabindex="-1">잠과 부하</h2>' +
+    return '<h2 id="sheet-h" class="sheet-title" tabindex="-1">잠과 몸</h2>' +
       '<p class="sheet-sub">몸의 연료가 얼마나 채워졌는지 봐요.</p>' +
+      (d.dayChanged ? '<p class="hint-strong">새벽 6시가 지나 날짜가 바뀌었어요. 잠과 부하를 오늘 기준으로 다시 확인해 주세요.</p>' : "") +
       '<fieldset class="q"><legend>어젯밤 잔 시간</legend><div class="seg">' + SLEEP_H.map((o) => optHTML("set-sleep", o.id, o.label, d.sleepH === o.id, "sl-" + o.id)).join("") + "</div></fieldset>" +
       '<fieldset class="q"><legend>일어났을 때</legend><div class="seg">' + WAKE.map((o) => optHTML("set-wake", o.id, o.label, d.wake === o.id, "wk-" + o.id)).join("") + "</div></fieldset>" +
+      '<fieldset class="q"><legend>어제 몸을 얼마나 움직였나요?</legend><div class="seg seg-col">' + MOVE.map((o) => optHTML("set-move", o.id, o.label, d.move === o.id, "mv-" + o.id)).join("") + "</div></fieldset>" +
+      '<fieldset class="q"><legend>해당하면 누르기</legend><div class="chips">' + SLEEP_FLAGS.map((o) => chipHTML(o, d.flags.includes(o.id), "flag", "f-" + o.id)).join("") + "</div></fieldset>";
+  }
+  if (d.step === 2) {
+    const kept = d.rhythm.filter((id) => RHYTHM.some((o) => o.id === id)).length;
+    return '<h2 id="sheet-h" class="sheet-title" tabindex="-1">생활 리듬</h2>' +
+      '<p class="sheet-sub">어제 아침부터 오늘 아침까지 지킨 것을 모두 누르세요. 컨디션이 괜찮을 때는 하다가, 흔들리면 먼저 빠지는 것들이에요.</p>' +
+      '<div class="chips" role="group" aria-label="지킨 생활 리듬">' + RHYTHM.map((o) => chipHTML(o, d.rhythm.includes(o.id), "rhythm", "rh-" + o.id)).join("") + "</div>" +
+      '<p class="hint rhythm-count">' + kept + "/" + RHYTHM.length + " 지킴</p>";
+  }
+  if (d.step === 3) {
+    return '<h2 id="sheet-h" class="sheet-title" tabindex="-1">부하</h2>' +
+      '<p class="sheet-sub">요즘 쓴 힘과 오늘 이미 잡힌 일을 봐요.</p>' +
       '<fieldset class="q"><legend>지난 3일 중 무리한 날</legend><div class="seg seg-4">' + PUSHED.map((o) => optHTML("set-pushed", String(o.n), o.n + "일", d.pushed === o.n, "pu-" + o.n)).join("") + "</div>" +
         (d.pushedFromLog ? '<p class="hint">기록에서 가져왔어요. 다르면 고쳐 주세요.</p>' : "") + "</fieldset>" +
+      '<fieldset class="q"><legend>오늘 이미 잡힌 큰 일</legend><p class="hint">약속·외출·면접처럼 힘이 드는 일. 점수에는 안 들어가고 계획 크기에서 빠져요.</p><div class="seg seg-4">' + PLANNED.map((o) => optHTML("set-planned", String(o.n), o.label, d.planned === o.n, "pl-" + o.n)).join("") + "</div></fieldset>" +
       (d.showUsed ? '<fieldset class="q"><legend>오늘 지금까지 쓴 에너지</legend><div class="seg seg-4">' + USED.map((o) => optHTML("set-used", o.id, o.label, d.used === o.id, "us-" + o.id)).join("") + "</div></fieldset>" : "") +
       '<fieldset class="q"><legend>해당하면 누르기</legend><div class="chips">' + LOAD.map((o) => chipHTML(o, d.flags.includes(o.id), "flag", "f-" + o.id)).join("") + "</div></fieldset>";
   }
-  if (d.step === 2) {
+  if (d.step === 4) {
     return '<h2 id="sheet-h" class="sheet-title" tabindex="-1">몸·마음 경고등</h2>' +
       '<p class="sheet-sub">지금 켜져 있는 것을 모두 고르세요. 없으면 그냥 다음으로.</p>' +
       '<fieldset class="q"><legend>몸</legend><div class="chips">' + BODY.map((o) => chipHTML(o, d.flags.includes(o.id), "flag", "f-" + o.id)).join("") + "</div></fieldset>" +
@@ -961,7 +1220,7 @@ function stepHTML(d) {
 }
 function footHTML(d) {
   const back = d.step > 0 ? '<button type="button" class="btn btn-ghost" data-act="step-back" id="sheet-back">뒤로</button>' : "";
-  const next = d.step < 3
+  const next = d.step < LAST_STEP
     ? '<button type="button" class="btn btn-primary" data-act="step-next" id="sheet-next"' + (canNext(d) ? "" : " disabled") + ">다음</button>"
     : '<button type="button" class="btn btn-primary" data-act="finish" id="sheet-finish">결과 보기</button>';
   return back + next;
@@ -992,7 +1251,7 @@ function renderSheet(opts) {
     fresh = true;
   }
   const fid = document.activeElement && document.activeElement.id;
-  $("#sheet-step").textContent = d.step + 1 + "/4 · " + STEPS[d.step];
+  $("#sheet-step").textContent = d.step + 1 + "/" + STEPS.length + " · " + STEPS[d.step];
   $("#sheet-progress").innerHTML = STEPS.map((_, i) => '<span class="' + (i <= d.step ? "on" : "") + '"></span>').join("");
   const body = $("#sheet-body");
   const top = body.scrollTop;
@@ -1010,13 +1269,21 @@ function renderSheet(opts) {
 
 /* ── 알림 ── */
 let toastTimer = 0;
+let toastTextTimer = 0;
 function toast(msg) {
   const el = $("#toast");
   if (!msg) return;
-  el.textContent = msg;
   el.hidden = false;
+  el.textContent = "";
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
+  clearTimeout(toastTextTimer);
+  toastTextTimer = setTimeout(() => { el.textContent = msg; }, 40);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 2800);
+}
+function announce(text) {
+  const el = $("#sr-live");
+  el.textContent = "";
+  setTimeout(() => { el.textContent = text; }, 40);
 }
 
 /* ── 누르기 ── */
@@ -1032,34 +1299,88 @@ document.addEventListener("click", (e) => {
     case "set-gut": if (d) { d.gut = Number(b.dataset.v); renderSheet(); } break;
     case "set-sleep": if (d) { d.sleepH = b.dataset.v; renderSheet(); } break;
     case "set-wake": if (d) { d.wake = b.dataset.v; renderSheet(); } break;
+    case "set-move": if (d) { d.move = b.dataset.v; renderSheet(); } break;
     case "set-pushed": if (d) { d.pushed = Number(b.dataset.v); d.pushedFromLog = false; renderSheet(); } break;
+    case "set-planned": if (d) { d.planned = Number(b.dataset.v); renderSheet(); } break;
     case "set-used": if (d) { d.used = b.dataset.v; renderSheet(); } break;
     case "flag": if (d && ALL_FLAGS.has(b.dataset.v)) { toggleIn(d.flags, b.dataset.v); renderSheet(); } break;
-    case "step-next": if (d && canNext(d) && d.step < 3) { d.step++; renderSheet({ stepChanged: true }); } break;
+    case "rhythm": if (d && RHYTHM.some((o) => o.id === b.dataset.v)) { toggleIn(d.rhythm, b.dataset.v); renderSheet(); } break;
+    case "step-next": if (d && canNext(d) && d.step < LAST_STEP) { d.step++; renderSheet({ stepChanged: true }); } break;
     case "step-back": if (d && d.step > 0) { d.step--; renderSheet({ stepChanged: true }); } break;
     case "finish": finishCheck(); break;
-    case "set-oc": setOutcome(b.dataset.k, b.dataset.oc); break;
+    case "set-oc": {
+      const fromAsk = !!b.closest("#ask");
+      setOutcome(b.dataset.k, b.dataset.oc);
+      if (fromAsk) focusFirst(["ask-easy", "btn-start", "today-h"]);
+      else focusFirst(["oc-" + b.dataset.k]);
+      break;
+    }
     case "oc-edit": state.ocEdit = state.ocEdit === b.dataset.k ? null : b.dataset.k; render(); break;
-    case "dismiss-y": state.dismissed.add(b.dataset.k); render(); break;
-    case "q-toggle": if (state.quick.has(b.dataset.v)) state.quick.delete(b.dataset.v); else state.quick.add(b.dataset.v); render(); break;
-    case "q-clear": state.quick.clear(); render(); break;
+    case "dismiss-ask": state.dismissed.add(b.dataset.k); render(); focusFirst(["ask-easy", "btn-start", "today-h"]); break;
+    case "q-toggle": {
+      if (state.quick.has(b.dataset.v)) state.quick.delete(b.dataset.v); else state.quick.add(b.dataset.v);
+      render();
+      const v = quickVerdict();
+      announce(v.title + " " + v.text);
+      break;
+    }
+    case "q-clear": state.quick.clear(); render(); focusFirst(["q-" + QUICK[0].id]); announce(quickVerdict().title); break;
+    case "retry-save": retryFailed(); break;
   }
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && state.sheetOpen) closeSheet();
 });
 
+/* 열어 둔 채로 새벽 6시를 넘기거나, 다른 앱에서 돌아왔을 때 날짜를 다시 맞춘다 */
+function scheduleRollover() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(6, 0, 5, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  setTimeout(() => { render(); scheduleRollover(); }, Math.min(next - now, 2147483000));
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+window.addEventListener("pageshow", () => render());
+
 /* ── 시작 ── */
+function sanitizeDraft(x) {
+  if (!x || typeof x !== "object" || x.k !== todayKey()) return null;
+  const d = newDraft(x.k);
+  if (Number.isInteger(x.gut) && x.gut >= 0 && x.gut <= 10) d.gut = x.gut;
+  if (SLEEP_H.some((o) => o.id === x.sleepH)) d.sleepH = x.sleepH;
+  if (WAKE.some((o) => o.id === x.wake)) d.wake = x.wake;
+  if (MOVE.some((o) => o.id === x.move)) d.move = x.move;
+  if (PUSHED.some((o) => o.n === x.pushed)) d.pushed = x.pushed;
+  if (PLANNED.some((o) => o.n === x.planned)) d.planned = x.planned;
+  if (Array.isArray(x.rhythm)) d.rhythm = x.rhythm.filter((id) => RHYTHM.some((o) => o.id === id));
+  if (USED.some((o) => o.id === x.used)) d.used = x.used;
+  if (Array.isArray(x.flags)) d.flags = x.flags.filter((f) => ALL_FLAGS.has(f));
+  if (Number.isInteger(x.step) && x.step >= 0 && x.step <= LAST_STEP) d.step = x.step;
+  d.showUsed = !!x.showUsed || d.showUsed;
+  d.pushedFromLog = !!x.pushedFromLog;
+  d.dayChanged = !!x.dayChanged;
+  return d;
+}
 function boot(data) {
-  if (data && data.draft && typeof data.draft === "object" && data.draft.k === todayKey()) {
-    state.draft = data.draft;
-    state.sheetOpen = !!data.sheetOpen;
+  let saved = null;
+  try { saved = data ? clone(data) : null; } catch (e) { saved = null; }
+  if (saved) {
+    state.draft = sanitizeDraft(saved.draft);
+    state.sheetOpen = !!(state.draft && saved.sheetOpen);
+    if (Array.isArray(saved.quick)) state.quick = new Set(saved.quick.filter((q) => QUICK.some((x) => x.id === q)));
   }
-  if (data && Array.isArray(data.quick)) state.quick = new Set(data.quick.filter((q) => QUICK.some((x) => x.id === q)));
   renderHow();
   render();
-  renderSheet();
   connect();
+  try {
+    renderSheet();
+  } catch (e) {
+    state.draft = null;
+    state.sheetOpen = false;
+    renderSheet();
+  }
+  scheduleRollover();
 }
 try {
   const hot = window.claude && window.claude.hot;
@@ -1069,6 +1390,7 @@ try {
 } catch (e) {
   boot({});
 }
-window.__energy = { computeResult, dayKey, levelOf };
+/* 확인용 (CLAUDE.md 참고) */
+window.__energy = { computeResult, dayKey, levelOf, state, render, askDay };
 })();
 </script>
