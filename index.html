@@ -139,6 +139,11 @@ p { margin: 0; }
 .notes li { padding-left: 14px; position: relative; }
 .notes li::before { content: ""; position: absolute; left: 2px; top: 0.62em; width: 5px; height: 5px; border-radius: 50%; background: var(--line-2); }
 
+.rhythm-line { margin-top: 8px; font-size: 14px; color: var(--ink-2); }
+.rhythm-line b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.rhythm-line.is-warn { padding: 9px 12px; border-radius: var(--r-s); color: var(--ink); background: var(--surface-2); background: color-mix(in srgb, var(--warn) 20%, var(--surface)); }
+.rhythm-count { margin-top: 12px; }
+.down { margin-left: 2px; color: var(--crit); font-weight: 700; }
 .plan { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .plan-k { font-size: 12px; color: var(--muted); }
 .plan-v { margin: 2px 0 8px; font-size: 19px; font-weight: 700; }
@@ -291,7 +296,7 @@ details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding
 .sheet-head { padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); }
 .sheet-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .sheet-step { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.progress { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 10px; }
+.progress { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 10px; }
 .progress span { height: 4px; border-radius: 2px; background: var(--line); }
 .progress span.on { background: var(--accent); }
 .sheet-body { flex: 1; overflow-y: auto; padding: 12px max(16px, env(safe-area-inset-right, 0px)) 28px max(16px, env(safe-area-inset-left, 0px)); }
@@ -351,7 +356,7 @@ details summary { cursor: pointer; font-size: 14px; color: var(--ink-2); padding
 document.documentElement.lang = "ko";
 
 /* ── 질문과 점수. 바꾸면 README의 "점수 계산"도 같이 고친다 ── */
-const MODEL_V = 3;
+const MODEL_V = 4;
 const SLEEP_H = [
   { id: "lt5", label: "5시간 미만", d: -3 },
   { id: "5-6", label: "5~6시간", d: -2 },
@@ -388,6 +393,37 @@ const LOAD = [
 ];
 /* 그날 상황이라, 같은 날 다시 체크할 때 이어받는 항목 */
 const DAY_FLAGS = ["late", "social", "travel"];
+/* 생활 리듬: 컨디션이 괜찮을 때는 하다가, 흔들리면 먼저 빠지는 행동. 하나하나보다 지킨 개수로 본다 */
+const RHYTHM = [
+  { id: "wake", label: "정한 시간에 일어났다" },
+  { id: "wash", label: "씻고 옷을 갈아입었다" },
+  { id: "meal", label: "끼니를 제때 먹었다" },
+  { id: "memo", label: "하루 메모(한 일)를 적었다" },
+  { id: "pray", label: "명상/기도를 했다" },
+  { id: "wind", label: "자기 전 하루를 정리했다 (일기 등)" },
+  { id: "phone", label: "폰을 침대 밖에 두고 잤다" },
+];
+/* 지킨 비율 80% 이상 0, 50% 이상 −0.5, 그 아래 −1 (7개면 6~7 / 4~5 / 0~3) */
+function rhythmD(kept, total) {
+  const r = total ? kept / total : 1;
+  return r >= 0.8 ? 0 : r >= 0.5 ? -0.5 : -1;
+}
+function rhythmBands() {
+  const t = RHYTHM.length;
+  const bands = [];
+  for (let k = t; k >= 0; k--) {
+    const d = rhythmD(k, t);
+    const last = bands[bands.length - 1];
+    if (last && last.d === d) last.lo = k;
+    else bands.push({ hi: k, lo: k, d });
+  }
+  return bands;
+}
+function rhythmOfCheck(c) {
+  if (!c || !Array.isArray(c.rhythm)) return null;
+  const total = Number.isInteger(c.rhythmOf) && c.rhythmOf > 0 ? c.rhythmOf : RHYTHM.length;
+  return { kept: Math.min(c.rhythm.length, total), total };
+}
 const BODY = [
   { id: "sick", label: "감기·몸살 기운이나 아픈 데가 있다", d: -1 },
   { id: "heavy", label: "몸이 무겁게 처진다", d: -0.5 },
@@ -434,7 +470,7 @@ const QUICK = [
   { id: "qnostop", label: "멈추려 해도 잘 안 멈춰진다" },
   { id: "qedgy", label: "짜증이 올라온다" },
 ];
-const STEPS = ["느낌", "잠과 몸", "부하", "몸·마음 경고등", "브레이크 점검"];
+const STEPS = ["느낌", "잠과 몸", "생활 리듬", "부하", "몸·마음 경고등", "브레이크 점검"];
 const LAST_STEP = STEPS.length - 1;
 
 const ICON = {
@@ -491,6 +527,11 @@ function computeResult(c) {
   if (pu && pu.d) parts.push({ label: "지난 3일 중 무리한 날 " + pu.n + "일", d: pu.d });
   const us = USED.find((o) => o.id === c.used);
   if (us && us.d) parts.push({ label: "오늘 이미 쓴 에너지: " + us.label, d: us.d });
+  const rh = rhythmOfCheck(c);
+  if (rh) {
+    const rd = rhythmD(rh.kept, rh.total);
+    if (rd) parts.push({ label: "생활 리듬 " + rh.kept + "/" + rh.total + " 지킴", d: rd });
+  }
   const flags = Array.isArray(c.flags) ? c.flags : [];
   for (const g of FLAG_GROUPS) for (const o of g) if (o.d && flags.includes(o.id)) parts.push({ label: o.label, d: o.d });
   const computed = floorHalf(clamp(10 + parts.reduce((s, p) => s + p.d, 0), 0, 10));
@@ -550,6 +591,8 @@ function normalizeDay(v, id) {
     used: typeof c.used === "string" ? c.used : null,
     move: typeof c.move === "string" ? c.move : null,
     planned: Number.isInteger(c.planned) ? c.planned : null,
+    rhythm: Array.isArray(c.rhythm) ? c.rhythm.filter((x) => typeof x === "string") : null,
+    rhythmOf: Number.isInteger(c.rhythmOf) && c.rhythmOf > 0 ? c.rhythmOf : null,
     flags: Array.isArray(c.flags) ? c.flags.filter((f) => typeof f === "string" && ALL_FLAGS.has(f)) : [],
     v: Number(c.v) || 1,
   })) : [];
@@ -720,6 +763,7 @@ function newDraft(k) {
     pushed: prev && prev.pushed !== null ? prev.pushed : fromLog,
     pushedFromLog: !prev && fromLog !== null,
     planned: prev ? prev.planned : null,
+    rhythm: prev && Array.isArray(prev.rhythm) ? prev.rhythm.filter((id) => RHYTHM.some((o) => o.id === id)) : [],
     used: null,
     showUsed: needsUsedNow(k),
     dayChanged: false,
@@ -729,7 +773,7 @@ function newDraft(k) {
 function canNext(d) {
   if (d.step === 0) return d.gut !== null;
   if (d.step === 1) return !!d.sleepH && !!d.wake && !!d.move;
-  if (d.step === 2) return d.pushed !== null && d.planned !== null && d.planned !== undefined && (!d.showUsed || !!d.used);
+  if (d.step === 3) return d.pushed !== null && d.planned !== null && d.planned !== undefined && (!d.showUsed || !!d.used);
   return true;
 }
 function openCheck() {
@@ -738,7 +782,7 @@ function openCheck() {
   const d = state.draft;
   if (!d.showUsed && needsUsedNow(k)) {
     d.showUsed = true;
-    if (d.step > 2 && !d.used) d.step = 2;
+    if (d.step > 3 && !d.used) d.step = 3;
   }
   state.sheetOpen = true;
   renderSheet({ opening: true });
@@ -773,6 +817,8 @@ function finishCheck() {
     move: d.move,
     pushed: d.pushed,
     planned: d.planned,
+    rhythm: d.rhythm.slice(),
+    rhythmOf: RHYTHM.length,
     used: d.showUsed ? d.used : null,
     flags: d.flags.slice(),
     v: MODEL_V,
@@ -917,6 +963,7 @@ function renderToday() {
     scaleHTML(r.gut, r.score, false) +
     '<p class="gap' + (r.overRisk ? " is-over" : "") + '">' + esc(gapText(r)) + "</p>" +
     (notes.length ? '<ul class="notes">' + notes.map((t) => "<li>" + esc(t) + "</li>").join("") + "</ul>" : "") +
+    rhythmLineHTML(k, last) +
     '<div class="plan"><p class="plan-k">오늘 계획 크기' + (r.planByGut ? " (느낌 기준)" : "") + "</p>" +
       '<p class="plan-v">' + esc(plan.plan) + "</p>" +
       plannedHTML(r.planLevel, last.planned) +
@@ -932,6 +979,36 @@ function renderToday() {
       (r.parts.length ? '<ul class="parts">' + r.parts.map((p) => "<li><span>" + esc(p.label) + '</span><span class="d">' + minus(p.d) + "</span></li>").join("") + "</ul>"
         : '<p class="note">더하거나 깎인 곳 없이 10점이에요.</p>') +
     "</details>";
+}
+/* 생활 리듬: 그날 마지막 체크 기준. 흐름은 최근 5일 안의 기록 3개가 이틀 연속 줄었는지 (pts[0]이 가장 최근) */
+function dayRhythm(k) {
+  const day = state.days.get(k);
+  return day ? rhythmOfCheck([...day.checks].reverse().find((x) => Array.isArray(x.rhythm))) : null;
+}
+function rhythmTrend(k) {
+  const pts = [];
+  for (let i = 0; i < 5 && pts.length < 3; i++) {
+    const rh = dayRhythm(addDays(k, -i));
+    if (rh) pts.push(rh);
+  }
+  const r = pts.map((p) => p.kept / p.total);
+  return { pts, falling: pts.length === 3 && r[0] < r[1] && r[1] < r[2] };
+}
+function rhythmLineHTML(k, last) {
+  const rh = rhythmOfCheck(last);
+  if (!rh) return "";
+  const tr = rhythmTrend(k);
+  if (tr.falling) {
+    return '<p class="rhythm-line is-warn">생활 리듬 <b>' + rh.kept + "/" + rh.total + "</b> · 이틀째 줄고 있어요 (" +
+      tr.pts.slice().reverse().map((p) => p.kept).join(" → ") + "). 흔들리기 시작한 신호예요. 오늘은 큰 일보다 기상·끼니·잠부터 지키기</p>";
+  }
+  return '<p class="rhythm-line">생활 리듬 <b>' + rh.kept + "/" + rh.total + "</b></p>";
+}
+function rhythmText(rh, older) {
+  if (!rh) return "";
+  const down = older && rh.kept / rh.total < older.kept / older.total;
+  return " · 리듬 <b>" + rh.kept + "/" + rh.total + "</b>" +
+    (down ? '<span class="down" aria-hidden="true">↓</span><span class="visually-hidden">(전보다 줄어듦)</span>' : "");
 }
 /* 오늘 이미 잡힌 큰 일을 계획 크기와 견준다 */
 function plannedHTML(level, planned) {
@@ -993,7 +1070,7 @@ function miniHTML(c) {
     '<span class="mini-link" style="left:' + lo + "%;width:" + (hi - lo) + '%"></span>' +
     '<span class="mini-gut" style="left:' + g + '%"></span><span class="mini-sig" style="left:' + s + '%"></span></div>';
 }
-function rowHTML(k) {
+function rowHTML(k, rh, older) {
   const d = state.days.get(k);
   const c = d.checks[0];
   const oc = OUTCOMES.find((o) => o.id === d.outcome);
@@ -1001,12 +1078,20 @@ function rowHTML(k) {
   const visible = oc ? oc.short : "결과 기록";
   return '<li class="row"><div class="row-top">' +
     '<span class="row-date">' + dayLabel(k) + "</span>" +
-    '<span class="row-vals">' + (c ? "느낌 <b>" + fmt(c.gut) + "</b> · 신호 <b>" + fmt(c.score) + "</b>" + (d.checks.length > 1 ? ' <span class="row-more">+' + (d.checks.length - 1) + "회</span>" : "") : '<span class="muted">체크 없음</span>') + "</span>" +
+    '<span class="row-vals">' + (c ? "느낌 <b>" + fmt(c.gut) + "</b> · 신호 <b>" + fmt(c.score) + "</b>" + rhythmText(rh, older) + (d.checks.length > 1 ? ' <span class="row-more">+' + (d.checks.length - 1) + "회</span>" : "") : '<span class="muted">체크 없음</span>') + "</span>" +
     '<button type="button" class="oc ' + (oc ? "tone-" + oc.tone : "oc-empty") + '" data-act="oc-edit" data-k="' + k + '" id="oc-' + k + '" aria-expanded="' + editing + '" aria-label="' + visible + " · " + dayLabel(k) + ' 결과 바꾸기">' + visible + "</button></div>" +
     (c ? miniHTML(c) : "") +
     (editing ? '<div class="oc-pick" role="group" aria-label="' + dayLabel(k) + ' 결과 고르기">' + OUTCOMES.map((o) =>
       '<button type="button" class="oc-btn tone-' + o.tone + (d.outcome === o.id ? " is-on" : "") + '" data-act="set-oc" data-k="' + k + '" data-oc="' + o.id + '" id="ocp-' + k + "-" + o.id + '" aria-pressed="' + (d.outcome === o.id) + '">' + o.label + "</button>").join("") + "</div>" : "") +
     "</li>";
+}
+function rowsHTML(keys) {
+  const rhs = keys.map(dayRhythm);
+  return keys.map((k, i) => {
+    let older = null;
+    for (let j = i + 1; j < keys.length; j++) if (rhs[j]) { older = rhs[j]; break; }
+    return rowHTML(k, rhs[i], older);
+  }).join("");
 }
 function renderLog() {
   const keys = [...state.days.keys()].sort().reverse().slice(0, 21);
@@ -1027,7 +1112,7 @@ function renderLog() {
     '<div class="sec-head"><h2 class="h3" id="log-h">기록</h2>' +
     (keys.length ? '<div class="legend"><span><i class="key-gut"></i>느낌</span><span><i class="key-sig"></i>신호</span><span class="muted">그날 첫 체크</span></div>' : "") + "</div>" +
     stats +
-    (keys.length ? '<ol class="rows">' + keys.map(rowHTML).join("") + "</ol>"
+    (keys.length ? '<ol class="rows">' + rowsHTML(keys) + "</ol>"
       : '<p class="empty-log">' + (state.loaded ? "아직 기록이 없어요. 체크하면 여기에 날마다 느낌과 신호가 나란히 쌓여요. 다음 날 결과(여유·딱 맞음·무리·뻗음)까지 남기면 내 느낌이 얼마나 높게 나오는지 보여 드려요." : "기록을 불러오는 중…") + "</p>") +
     (state.loadNote ? '<p class="note">' + state.loadNote + "</p>" : "");
 }
@@ -1042,6 +1127,7 @@ function renderHow() {
   grp("일어났을 때", WAKE.map((o) => [o.label, o.d]));
   grp("잠 (해당하면)", SLEEP_FLAGS.map((o) => [o.label, o.d]));
   grp("어제 몸을 얼마나 움직였나", MOVE.map((o) => [o.label, o.d]));
+  grp("생활 리듬 (" + RHYTHM.length + "개 중 지킨 개수)", rhythmBands().map((b) => [(b.lo === b.hi ? String(b.hi) : b.lo + "~" + b.hi) + "개", b.d]));
   grp("지난 3일 중 무리한 날", PUSHED.map((o) => [o.n + "일", o.d]));
   grp("오늘 지금까지 쓴 에너지 (낮 12시 이후나 그날 두 번째 체크부터)", USED.map((o) => [o.label, o.d]));
   grp("부하 (해당하면)", LOAD.map((o) => [o.label, o.d]));
@@ -1056,6 +1142,7 @@ function renderHow() {
     "<li>8~10 충분 · 6~7.5 보통 · 4~5.5 낮음 · 0~3.5 바닥</li>" +
     "<li>오늘 계획 크기는 느낌과 신호 중 낮은 쪽에 맞춰요.</li>" +
     "<li>오늘 이미 잡힌 큰 일(약속·외출·면접 등)은 점수에 넣지 않고, 오늘 계획 크기에서 빼요.</li>" +
+    "<li>생활 리듬은 하나하나보다 지킨 개수로 봐요. 기록에 날마다 리듬을 보여 주고, 이틀 연속 줄면 오늘 판정에서 알려 줘요.</li>" +
     "<li>브레이크 세 기준 중 하나라도 켜지거나 신호가 3.5 이하면 브레이크를 안내해요.</li>" +
     "<li>느낌을 부풀리는 것은 점수를 거의 안 깎는 대신, 느낌이 높게 나올 수 있다고 알려 줘요.</li>" +
     "<li>하루는 새벽 6시에 바뀌어요. 새벽 2시에 한 체크는 전날 기록이 돼요.</li>" +
@@ -1105,6 +1192,13 @@ function stepHTML(d) {
       '<fieldset class="q"><legend>해당하면 누르기</legend><div class="chips">' + SLEEP_FLAGS.map((o) => chipHTML(o, d.flags.includes(o.id), "flag", "f-" + o.id)).join("") + "</div></fieldset>";
   }
   if (d.step === 2) {
+    const kept = d.rhythm.filter((id) => RHYTHM.some((o) => o.id === id)).length;
+    return '<h2 id="sheet-h" class="sheet-title" tabindex="-1">생활 리듬</h2>' +
+      '<p class="sheet-sub">어제 아침부터 오늘 아침까지 지킨 것을 모두 누르세요. 컨디션이 괜찮을 때는 하다가, 흔들리면 먼저 빠지는 것들이에요.</p>' +
+      '<div class="chips" role="group" aria-label="지킨 생활 리듬">' + RHYTHM.map((o) => chipHTML(o, d.rhythm.includes(o.id), "rhythm", "rh-" + o.id)).join("") + "</div>" +
+      '<p class="hint rhythm-count">' + kept + "/" + RHYTHM.length + " 지킴</p>";
+  }
+  if (d.step === 3) {
     return '<h2 id="sheet-h" class="sheet-title" tabindex="-1">부하</h2>' +
       '<p class="sheet-sub">요즘 쓴 힘과 오늘 이미 잡힌 일을 봐요.</p>' +
       '<fieldset class="q"><legend>지난 3일 중 무리한 날</legend><div class="seg seg-4">' + PUSHED.map((o) => optHTML("set-pushed", String(o.n), o.n + "일", d.pushed === o.n, "pu-" + o.n)).join("") + "</div>" +
@@ -1113,7 +1207,7 @@ function stepHTML(d) {
       (d.showUsed ? '<fieldset class="q"><legend>오늘 지금까지 쓴 에너지</legend><div class="seg seg-4">' + USED.map((o) => optHTML("set-used", o.id, o.label, d.used === o.id, "us-" + o.id)).join("") + "</div></fieldset>" : "") +
       '<fieldset class="q"><legend>해당하면 누르기</legend><div class="chips">' + LOAD.map((o) => chipHTML(o, d.flags.includes(o.id), "flag", "f-" + o.id)).join("") + "</div></fieldset>";
   }
-  if (d.step === 3) {
+  if (d.step === 4) {
     return '<h2 id="sheet-h" class="sheet-title" tabindex="-1">몸·마음 경고등</h2>' +
       '<p class="sheet-sub">지금 켜져 있는 것을 모두 고르세요. 없으면 그냥 다음으로.</p>' +
       '<fieldset class="q"><legend>몸</legend><div class="chips">' + BODY.map((o) => chipHTML(o, d.flags.includes(o.id), "flag", "f-" + o.id)).join("") + "</div></fieldset>" +
@@ -1210,6 +1304,7 @@ document.addEventListener("click", (e) => {
     case "set-planned": if (d) { d.planned = Number(b.dataset.v); renderSheet(); } break;
     case "set-used": if (d) { d.used = b.dataset.v; renderSheet(); } break;
     case "flag": if (d && ALL_FLAGS.has(b.dataset.v)) { toggleIn(d.flags, b.dataset.v); renderSheet(); } break;
+    case "rhythm": if (d && RHYTHM.some((o) => o.id === b.dataset.v)) { toggleIn(d.rhythm, b.dataset.v); renderSheet(); } break;
     case "step-next": if (d && canNext(d) && d.step < LAST_STEP) { d.step++; renderSheet({ stepChanged: true }); } break;
     case "step-back": if (d && d.step > 0) { d.step--; renderSheet({ stepChanged: true }); } break;
     case "finish": finishCheck(); break;
@@ -1258,6 +1353,7 @@ function sanitizeDraft(x) {
   if (MOVE.some((o) => o.id === x.move)) d.move = x.move;
   if (PUSHED.some((o) => o.n === x.pushed)) d.pushed = x.pushed;
   if (PLANNED.some((o) => o.n === x.planned)) d.planned = x.planned;
+  if (Array.isArray(x.rhythm)) d.rhythm = x.rhythm.filter((id) => RHYTHM.some((o) => o.id === id));
   if (USED.some((o) => o.id === x.used)) d.used = x.used;
   if (Array.isArray(x.flags)) d.flags = x.flags.filter((f) => ALL_FLAGS.has(f));
   if (Number.isInteger(x.step) && x.step >= 0 && x.step <= LAST_STEP) d.step = x.step;

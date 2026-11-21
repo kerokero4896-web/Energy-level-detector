@@ -1,7 +1,7 @@
 // 미리보기용 가짜 저장소. http://localhost:8123/?mock=1 로 열면 claude.ai의 db를 흉내 낸다.
 // 주소 뒤 옵션: snap=첫 기록이 올 때까지 ms(기본 50) · use=연결까지 ms(기본 0) · usenull=1(연결 안 됨)
 //              owner=0(주인 아님) · seed=0(시작 기록 없음) · failset=1(저장 실패)
-// 시작 기록: 이틀 전 = 체크 1개·결과 없음, 어제 = 체크 1개·결과 "뻗음"
+// 시작 기록: 이틀 전 = 체크 1개(리듬 6/7)·결과 없음, 어제 = 체크 1개(리듬 5/7)·결과 "뻗음"
 (() => {
   const q = new URLSearchParams(location.search);
   const num = (k, d) => (q.has(k) ? Number(q.get(k)) : d);
@@ -13,11 +13,12 @@
   const pad = (n) => String(n).padStart(2, "0");
   const keyOf = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
   const dk = (o) => keyOf(new Date(Date.now() - 6 * 3600e3 - o * 86400e3));
-  const check = (daysAgo, gut, score) => ({ at: new Date(Date.now() - daysAgo * 86400e3).toISOString(), gut, score, level: "ok", sleepH: "5-6", wake: "plain", pushed: 1, used: null, flags: ["late"], v: 1 });
+  const RH = ["wake", "wash", "meal", "memo", "pray", "wind", "phone"];
+  const check = (daysAgo, gut, score, kept) => ({ at: new Date(Date.now() - daysAgo * 86400e3).toISOString(), gut, score, level: "ok", sleepH: "5-6", wake: "plain", pushed: 1, used: null, flags: ["late"], rhythm: RH.slice(0, kept), rhythmOf: RH.length, v: 4 });
   const server = new Map();
   if (q.get("seed") !== "0") {
-    server.set(dk(2), { date: dk(2), checks: [check(2, 6, 6.5)], outcome: null, outcomeAt: null, updatedAt: null });
-    server.set(dk(1), { date: dk(1), checks: [check(1, 7, 5)], outcome: "crashed", outcomeAt: new Date().toISOString(), updatedAt: null });
+    server.set(dk(2), { date: dk(2), checks: [check(2, 6, 6.5, 6)], outcome: null, outcomeAt: null, updatedAt: null });
+    server.set(dk(1), { date: dk(1), checks: [check(1, 7, 5, 5)], outcome: "crashed", outcomeAt: new Date().toISOString(), updatedAt: null });
   }
   const copy = (o) => JSON.parse(JSON.stringify(o));
   const deep = (o) => { Object.freeze(o); for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return o; };
